@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acute-liver-failure-engine"
+version = "2.0.0"
+description = "LiverFailure Sentinel: King's College & ALFSG Prognostication Engine"
+readme = "README.md"
+authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+acute-liver-failure-engine = "acute_liver_failure_agent.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/abusuraihsakhri/acute-liver-failure-engine"
+Repository = "https://github.com/abusuraihsakhri/acute-liver-failure-engine.git"

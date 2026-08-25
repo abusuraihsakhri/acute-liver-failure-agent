@@ -1,0 +1,55 @@
+{
+  "suite_name": "Acute Liver Failure Critical Care & Prognostication Benchmark Suite",
+  "system_slug": "acute-liver-failure-agent",
+  "standard_reference": "AASLD / EASL Clinical Practice Guidelines on Acute Liver Failure",
+  "benchmark_cases": [
+    {
+      "case_id": "ALF-BENCH-01-APAP-ACIDOSIS",
+      "description": "Severe acetaminophen toxicity with severe lactic acidosis and coagulopathy meeting King's College criteria.",
+      "labs": {
+        "arterial_ph": 7.21,
+        "inr": 6.8,
+        "creatinine_mg_dl": 3.8,
+        "lactate_mmol_l": 5.2,
+        "ammonia_umol_l": 190.0
+      },
+      "he_grade": 3,
+      "etiology": "acetaminophen",
+      "expected_kings_college_met": true,
+      "expected_meld_min": 35.0,
+      "expected_urgent_listing": true
+    },
+    {
+      "case_id": "ALF-BENCH-02-NON-APAP-VIRAL",
+      "description": "Acute Hepatitis B acute liver failure with marked jaundice, coagulopathy, and subacute presentation.",
+      "labs": {
+        "arterial_ph": 7.38,
+        "inr": 4.5,
+        "bilirubin_mg_dl": 22.0,
+        "creatinine_mg_dl": 1.6
+      },
+      "age": 48,
+      "jaundice_to_coma_days": 12,
+      "he_grade": 2,
+      "etiology": "viral_hbv",
+      "expected_kings_college_met": true,
+      "expected_urgent_listing": true
+    },
+    {
+      "case_id": "ALF-BENCH-03-MILD-APAP-OVERDOSE",
+      "description": "Early presentation acetaminophen overdose without established liver failure.",
+      "labs": {
+        "arterial_ph": 7.42,
+        "inr": 1.2,
+        "creatinine_mg_dl": 0.9,
+        "lactate_mmol_l": 1.1
+      },
+      "he_grade": 0,
+      "etiology": "acetaminophen",
+      "apap_serum_ug_ml": 210.0,
+      "apap_ingestion_hours": 4.0,
+      "expected_kings_college_met": false,
+      "expected_nac_indicated": true
+    }
+  ]
+}
