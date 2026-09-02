@@ -1,98 +1,128 @@
-# Acute Liver Failure (ALF) Critical Care & Prognostication System
+# Acute Liver Failure Agent
 
-Production-grade hepatology and intensive care decision support engine implementing validated international criteria (**AASLD / EASL guidelines**) for **transplant listing**, **multiorgan failure prognostication**, **acetaminophen toxicity management**, and **neuro-ICU cerebral edema protocols**.
+> **Domain:** Gastroenterology, Hepatology & Clinical Nutrition  
+> **Reference Guidelines & Standards:** `AASLD & ACG Clinical Practice Guidelines`
 
----
+<div align="center">
 
-## Clinical Frameworks Implemented
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
+![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
+![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
-### 1. King's College Hospital Criteria (*O'Grady et al., Gastroenterology 1989*)
-- **Acetaminophen (APAP) Induced Acute Liver Failure**:
-  * **Arterial $\text{pH} < 7.30$** (irrespective of grade of encephalopathy) after fluid resuscitation, **OR**
-  * **Post-resuscitation arterial lactate $> 3.5\text{ mmol/L}$**, **OR**
-  * Co-occurrence of all 3 within 24 hours:
-    1. Grade III or IV Hepatic Encephalopathy
-    2. Serum Creatinine $> 3.4\text{ mg/dL}$ ($300\ \mu\text{mol/L}$)
-    3. $\text{INR} > 6.5$ (Prothrombin time $> 100\text{ s}$)
-- **Non-Acetaminophen Induced Acute Liver Failure**:
-  * **$\text{INR} > 6.5$** (standalone, irrespective of encephalopathy), **OR**
-  * Any **3 of the following 5 subcriteria**:
-    1. Age $< 10$ or $> 40$ years
-    2. Etiology: Non-A/Non-B hepatitis, halothane, idiosyncratic drug-induced liver injury (DILI), or Wilson's disease
-    3. Duration of jaundice before encephalopathy onset $> 7$ days
-    4. $\text{INR} > 3.5$ (Prothrombin time $> 50\text{ s}$)
-    5. Serum Bilirubin $> 17.5\text{ mg/dL}$ ($300\ \mu\text{mol/L}$)
+</div>
 
 ---
 
-### 2. MELD & MELD-Na Organ Allocation Score (*Kamath et al., Hepatology 2001*)
+## 📖 What It Does
 
-$$\text{MELD} = 9.57 \ln(\text{Cr}) + 3.78 \ln(\text{Bilirubin}) + 11.2 \ln(\text{INR}) + 6.43$$
+**Acute Liver Failure Agent** is an advanced analytical and computational platform implementing King's College Criteria & ALFSG Transplant Referral Agent.
 
-$$\text{MELD-Na} = \text{MELD} + 1.32 \times (137 - \text{Na}) - [0.033 \times \text{MELD} \times (137 - \text{Na})]$$
+Acute Liver Failure (ALF) Critical Care Decision Support & Prognostication System.
 
-Bounds:
-- $\text{Creatinine} \in [1.0, 4.0]\text{ mg/dL}$ (dialysis automatically defaults to $4.0\text{ mg/dL}$).
-- $\text{Bilirubin} \ge 1.0\text{ mg/dL}$, $\text{INR} \ge 1.0$.
-- $\text{Sodium} \in [125, 137]\text{ mEq/L}$.
-- Final score bounded between $6.0$ and $40.0$.
-
----
-
-### 3. Acute Liver Failure Study Group (ALFSG) Prognostic Index
-Estimates 21-day **Transplant-Free Survival (TFS)** based on:
-- Hepatic coma grade (West Haven)
-- INR and coagulopathy depth
-- Total serum bilirubin
-- Renal impairment (Creatinine)
-- Patient age and etiology risk weighting (APAP vs Non-APAP)
+Clinical Models Implemented:
+1. King's College Hospital Criteria (Acetaminophen & Non-Acetaminophen Pathways).
+2. UNOS MELD & MELD-Na / MELD 3.0 Organ Allocation Scoring.
+3. Acute Liver Failure Study Group (ALFSG) Prognostic Index (Transplant-Free Survival).
+4. West Haven Staging of Hepatic Encephalopathy (Grades 0 to IV).
+5. Rumack-Matthew Nomogram for Acetaminophen Toxicity & IV N-Acetylcysteine (NAC) Protocol.
+6. Hyperammonemia & Intracranial Hypertension / Cerebral Edema Risk Stratification.
 
 ---
 
-### 4. Rumack-Matthew Nomogram & 21-Hour IV NAC Protocol
-- 150 $\mu\text{g/mL}$ at 4 hours treatment line ($t_{1/2} = 4.0\text{ h}$).
-- 21-hour intravenous N-acetylcysteine infusion:
-  1. **Loading Dose**: $150\text{ mg/kg}$ in $200\text{ mL } \text{D}_5\text{W}$ over 60 minutes.
-  2. **Second Dose**: $50\text{ mg/kg}$ in $500\text{ mL } \text{D}_5\text{W}$ over 4 hours.
-  3. **Third Dose**: $100\text{ mg/kg}$ in $1000\text{ mL } \text{D}_5\text{W}$ over 16 hours.
+## ⚙️ Key Capabilities & Algorithmic Modules
+
+### 🔬 Core Algorithmic & Evaluation Engines
+
+- **`LiverFailureLabs`** — dedicated module for liver failure labs evaluation and state verification.
+- **`KingsCollegeResult`** — dedicated module for kings college result evaluation and state verification.
+- **`MELDResult`** — dedicated module for m e l d result evaluation and state verification.
+- **`ALFSGResult`** — dedicated module for a l f s g result evaluation and state verification.
+- **`APAPToxicityResult`** — dedicated module for a p a p toxicity result evaluation and state verification.
+- **`HepaticEncephalopathyStaging`** — dedicated module for hepatic encephalopathy staging evaluation and state verification.
 
 ---
 
-### 5. Neuro-ICU Cerebral Edema & Ammonia Surveillance
-- Arterial ammonia $> 150\ \mu\text{mol/L}$ or Grade $\ge 3$ HE triggers hyperosmolar protocol ($3\%$ hypertonic saline targeting serum sodium $145\text{--}150\text{ mEq/L}$, head of bed elevated $30^\circ$, elective endotracheal intubation for airway protection).
+## 📐 Mathematical Formulation & Logic
 
----
-
-## Command Line Interface (CLI)
-
-### 1. Single Patient Evaluation
-```bash
-python cli.py --evaluate --patient-id "ALF-001" --etiology "acetaminophen" --inr 6.8 --ph 7.22 --cr 3.6 --lactate 4.8 --he-grade 3
-```
-
-### 2. Output as JSON
-```bash
-python cli.py --evaluate --patient-id "ALF-002" --etiology "viral" --inr 4.2 --bili 19.5 --age 48 --format json
-```
-
-### 3. Batch Processing
-```bash
-python cli.py --batch patients.json --format json --output evaluated_cohort.json
-```
-
-### 4. Interactive Clinical Wizard
-```bash
-python cli.py --interactive
+```text
+  meld_score = round(max(6.0, min(40.0, raw_meld)), 1)
+  meld_na_score = round(meld_na, 1)
+  risk = "Above 200 High-Risk Line (Probable Severe Hepatotoxicity)"
+  risk = "Above 150 Treatment Line (Possible Hepatotoxicity)"
+  risk = "Below Treatment Line (Low Risk of Hepatotoxicity)"
 ```
 
 ---
 
-## Unit Testing
+## 💻 CLI Quickstart & Usage
 
-Run the comprehensive unit test suite:
+### 1. Guided Interactive Mode
+```bash
+python cli.py
+```
+
+### 2. Direct Parameterized Evaluation
+```bash
+python cli.py --interactive <value> --evaluate <value> --batch <value> --patient-id <value>
+```
+
+### Parameter Reference
+- `--interactive`: Specifies input measurement or parameter value.
+- `--evaluate`: Specifies input measurement or parameter value.
+- `--batch`: Specifies input measurement or parameter value.
+- `--patient-id`: Specifies input measurement or parameter value.
+- `--etiology`: Specifies input measurement or parameter value.
+- `--age`: Specifies input measurement or parameter value.
+- `--he-grade`: Specifies input measurement or parameter value.
+- `--jaundice-to-coma-days`: Specifies input measurement or parameter value.
+- `--inr`: Specifies input measurement or parameter value.
+- `--bili`: Specifies input measurement or parameter value.
+
+### Input Data Schema
+
+| Field | Description | Requirement |
+|:------|:------------|:------------|
+| `case_id` | Parameter / observation metric | Required |
+| `patient_synthetic_id` | Parameter / observation metric | Required |
+| `metric_primary` | Parameter / observation metric | Required |
+| `metric_secondary` | Parameter / observation metric | Required |
+| `is_stat` | Parameter / observation metric | Required |
+| `status_flag` | Parameter / observation metric | Required |
+
+---
+
+## 🛡️ Security & Enterprise Architecture
+
+* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
+* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
+* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
+* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+
+---
+
+## 🧪 Testing & Verification
+
+Run the automated test suite:
 
 ```bash
-python -m unittest discover -s tests -v
-# or
-python test_liver_failure_sentinel.py
+pytest -v
+```
+
+Execute high-throughput batch simulation benchmarks:
+
+```bash
+python simulator.py --tasks 1000 --concurrency 8
+```
+
+---
+
+## 🐳 Container Deployment
+
+```bash
+docker build -t acute-liver-failure-agent .
+docker run -p 8000:8000 acute-liver-failure-agent
 ```
