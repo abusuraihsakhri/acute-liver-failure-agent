@@ -58,6 +58,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Output formatting
     parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (default: text).")
+    parser.add_argument("--json", action="store_true", help="Output result as formatted JSON (shorthand for --format json).")
     parser.add_argument("--output", "-o", metavar="FILE", help="Write results to file.")
 
     return parser
@@ -145,6 +146,9 @@ def run_interactive():
 def main(argv=None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.json:
+        args.format = "json"
 
     if args.interactive or (not args.evaluate and not args.batch and len(sys.argv) == 1):
         run_interactive()

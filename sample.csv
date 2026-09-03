@@ -1,4 +1,4 @@
-case_id,patient_synthetic_id,metric_primary,metric_secondary,is_stat,status_flag
-CASE-001,SYNTH-01,25.4,14.2,True,DISCORDANT
-CASE-002,SYNTH-02,12.0,4.1,False,NORMAL
-CASE-003,SYNTH-03,32.0,18.5,True,SUSPICIOUS
+patient_id,etiology,age,he_grade,inr,bili,cr,ph,lactate,sodium,ammonia
+PT-001,acetaminophen,32,3,6.8,4.5,3.6,7.24,4.2,136,120
+PT-002,viral,45,1,2.1,12.0,1.2,7.38,1.5,138,65
+PT-003,dili,28,4,4.2,18.5,2.4,7.31,2.8,132,160

@@ -298,6 +298,34 @@ class TestAmmoniaAndExtendedCalculations(unittest.TestCase):
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    def test_cli_json_flag(self):
+        out = io.StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = out
+        try:
+            code = cli.main(["--evaluate", "--patient-id", "PT_JSON", "--ph", "7.25", "--inr", "6.8", "--cr", "3.5", "--he-grade", "3", "--json"])
+            self.assertEqual(code, 0)
+        finally:
+            sys.stdout = old_stdout
+
+        data = json.loads(out.getvalue())
+        self.assertEqual(data["patient_id"], "PT_JSON")
+        self.assertTrue(data["kings_college"]["criteria_met"])
+
+    def test_sample_csv_batch(self):
+        sample_path = PROJECT_ROOT / "sample.csv"
+        out = io.StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = out
+        try:
+            code = cli.main(["-i", str(sample_path), "--json"])
+            self.assertEqual(code, 0)
+        finally:
+            sys.stdout = old_stdout
+
+        data = json.loads(out.getvalue())
+        self.assertEqual(len(data), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

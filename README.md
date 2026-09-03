@@ -1,128 +1,111 @@
-# Acute Liver Failure Agent
+# Acute Liver Failure Critical Care & Transplant Decision Support Agent
 
-> **Domain:** Gastroenterology, Hepatology & Clinical Nutrition  
-> **Reference Guidelines & Standards:** `AASLD & ACG Clinical Practice Guidelines`
+A Python clinical decision support system and CLI tool for acute liver failure (ALF) critical care evaluation, prognostic scoring, and liver transplantation triage. Implements King's College Hospital Criteria, UNOS MELD and MELD-Na organ allocation scoring, the Acute Liver Failure Study Group (ALFSG) prognostic index, West Haven hepatic encephalopathy staging, Rumack-Matthew APAP nomogram assessment, and hyperammonemia/ICP management protocols.
 
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
+Requires Python standard library only (zero external runtime dependencies).
 
 ---
 
-## 📖 What It Does
+## Features
 
-**Acute Liver Failure Agent** is an advanced analytical and computational platform implementing King's College Criteria & ALFSG Transplant Referral Agent.
-
-Acute Liver Failure (ALF) Critical Care Decision Support & Prognostication System.
-
-Clinical Models Implemented:
-1. King's College Hospital Criteria (Acetaminophen & Non-Acetaminophen Pathways).
-2. UNOS MELD & MELD-Na / MELD 3.0 Organ Allocation Scoring.
-3. Acute Liver Failure Study Group (ALFSG) Prognostic Index (Transplant-Free Survival).
-4. West Haven Staging of Hepatic Encephalopathy (Grades 0 to IV).
-5. Rumack-Matthew Nomogram for Acetaminophen Toxicity & IV N-Acetylcysteine (NAC) Protocol.
-6. Hyperammonemia & Intracranial Hypertension / Cerebral Edema Risk Stratification.
+- **King's College Hospital Criteria:** Evaluates both Acetaminophen (arterial pH < 7.30 or concurrent INR > 6.5, creatinine > 3.4 mg/dL, and Grade III/IV encephalopathy) and Non-Acetaminophen pathways (INR > 6.5 standalone or >= 3 of 5 unfavorable criteria: age <10 or >40, unfavorable etiology, jaundice-to-coma >7 days, INR > 3.5, bilirubin > 17.5 mg/dL).
+- **MELD & MELD-Na Scoring:** Calculates 90-day/30-day mortality risk and UNOS Status 1A emergency prioritization tiers.
+- **ALFSG Prognostic Index:** Estimates transplant-free survival (TFS) percentage using etiology, coma grade, INR, bilirubin, and creatinine predictors.
+- **West Haven Hepatic Encephalopathy Staging:** Stages HE from Grade 0 (subclinical) through Grade IV (coma) with airway protection and cerebral edema risk stratification.
+- **Rumack-Matthew Nomogram & NAC Protocol:** Evaluates acute acetaminophen overdose risk relative to 150 ug/mL and 200 ug/mL lines and outputs 21-hour IV N-Acetylcysteine dosing instructions.
+- **Ammonia & ICP Risk Protocol:** Stratifies cerebral edema/herniation risk based on arterial ammonia and targets hyperosmolar therapy (3% hypertonic saline to serum Na 145-155 mEq/L).
+- **Interactive Wizard & Batch CLI:** Guided clinical interview, single-patient evaluation flags, and batch processing of CSV patient rosters.
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Installation & Requirements
 
-### 🔬 Core Algorithmic & Evaluation Engines
+- Python 3.10+ (tested on 3.10, 3.11, 3.12)
+- Zero external runtime dependencies. `pytest` is optional for running unit tests.
 
-- **`LiverFailureLabs`** — dedicated module for liver failure labs evaluation and state verification.
-- **`KingsCollegeResult`** — dedicated module for kings college result evaluation and state verification.
-- **`MELDResult`** — dedicated module for m e l d result evaluation and state verification.
-- **`ALFSGResult`** — dedicated module for a l f s g result evaluation and state verification.
-- **`APAPToxicityResult`** — dedicated module for a p a p toxicity result evaluation and state verification.
-- **`HepaticEncephalopathyStaging`** — dedicated module for hepatic encephalopathy staging evaluation and state verification.
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-```text
-  meld_score = round(max(6.0, min(40.0, raw_meld)), 1)
-  meld_na_score = round(meld_na, 1)
-  risk = "Above 200 High-Risk Line (Probable Severe Hepatotoxicity)"
-  risk = "Above 150 Treatment Line (Possible Hepatotoxicity)"
-  risk = "Below Treatment Line (Low Risk of Hepatotoxicity)"
+```bash
+git clone https://github.com/abusuraihsakhri/acute-liver-failure-agent.git
+cd acute-liver-failure-agent
 ```
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## CLI Usage
 
-### 1. Guided Interactive Mode
+### 1. Single Patient Evaluation
+Evaluate acute liver failure presentation:
 ```bash
-python cli.py
+python cli.py --evaluate --patient-id PT-001 --etiology acetaminophen --ph 7.25 --inr 6.8 --cr 3.5 --he-grade 3
+```
+Output as JSON:
+```bash
+python cli.py --evaluate --patient-id PT-001 --etiology acetaminophen --ph 7.25 --inr 6.8 --cr 3.5 --he-grade 3 --json
 ```
 
-### 2. Direct Parameterized Evaluation
+### 2. Batch Patient CSV Evaluation
+Evaluate patient cohort from CSV:
 ```bash
-python cli.py --interactive <value> --evaluate <value> --batch <value> --patient-id <value>
+python cli.py -i sample.csv --json
 ```
 
-### Parameter Reference
-- `--interactive`: Specifies input measurement or parameter value.
-- `--evaluate`: Specifies input measurement or parameter value.
-- `--batch`: Specifies input measurement or parameter value.
-- `--patient-id`: Specifies input measurement or parameter value.
-- `--etiology`: Specifies input measurement or parameter value.
-- `--age`: Specifies input measurement or parameter value.
-- `--he-grade`: Specifies input measurement or parameter value.
-- `--jaundice-to-coma-days`: Specifies input measurement or parameter value.
-- `--inr`: Specifies input measurement or parameter value.
-- `--bili`: Specifies input measurement or parameter value.
+### 3. Acetaminophen Toxicity Evaluation
+Evaluate APAP ingestion with serum level:
+```bash
+python cli.py --evaluate --patient-id APAP-101 --etiology acetaminophen --apap-level 180 --apap-hours 6 --inr 3.2 --he-grade 2 --json
+```
 
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `case_id` | Parameter / observation metric | Required |
-| `patient_synthetic_id` | Parameter / observation metric | Required |
-| `metric_primary` | Parameter / observation metric | Required |
-| `metric_secondary` | Parameter / observation metric | Required |
-| `is_stat` | Parameter / observation metric | Required |
-| `status_flag` | Parameter / observation metric | Required |
+### 4. Interactive Clinical Wizard
+Launch step-by-step terminal wizard:
+```bash
+python cli.py --interactive
+```
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
+## Python API Quickstart
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+```python
+from liver_failure_prognostic import (
+    LiverFailureLabs,
+    AcuteLiverFailureDecisionEngine,
+)
+
+engine = AcuteLiverFailureDecisionEngine()
+
+labs = LiverFailureLabs(
+    inr=6.8,
+    bilirubin_mg_dl=6.5,
+    creatinine_mg_dl=3.5,
+    arterial_ph=7.24,
+    lactate_mmol_l=4.2,
+    sodium_meq_l=136.0,
+    ammonia_umol_l=120.0,
+)
+
+dossier = engine.evaluate_patient(
+    patient_id="PT-001",
+    labs=labs,
+    he_grade=3,
+    age=32,
+    etiology="acetaminophen",
+)
+
+print(f"King's Criteria Met: {dossier.kings_college.criteria_met}")
+print(f"Listing Urgency: {dossier.kings_college.transplant_listing_urgency}")
+print(f"MELD Score: {dossier.meld.meld_score} | TFS: {dossier.alfsg.transplant_free_survival_pct}%")
+for action in dossier.urgent_actions:
+    print(f" -> {action}")
+```
 
 ---
 
-## 🧪 Testing & Verification
+## Running Tests
 
-Run the automated test suite:
+Run the test suite using standard `unittest` or `pytest`:
 
 ```bash
+python test_liver_failure_sentinel.py
+# or
 pytest -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
-
----
-
-## 🐳 Container Deployment
-
-```bash
-docker build -t acute-liver-failure-agent .
-docker run -p 8000:8000 acute-liver-failure-agent
-```
