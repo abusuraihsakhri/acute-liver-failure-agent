@@ -71,10 +71,14 @@ def run_interactive():
     try:
         patient_id = input("Patient ID [PT-001]: ").strip() or "PT-001"
         etiology = input("Etiology [acetaminophen / viral / dili / autoimmune / indeterminate]: ").strip() or "acetaminophen"
+        if not etiology:
+            raise ValueError("Etiology cannot be empty")
         age_str = input("Age in years [35]: ").strip() or "35"
         age = int(age_str)
         he_str = input("Hepatic Encephalopathy Grade (0=None, 1=Mild, 2=Asterixis, 3=Stupor, 4=Coma) [2]: ").strip() or "2"
         he_grade = int(he_str)
+        if not (0 <= he_grade <= 4):
+            raise ValueError("Hepatic Encephalopathy Grade must be between 0 and 4")
 
         print("\nEnter Lab Values:")
         inr = float(input("  INR [2.8]: ").strip() or "2.8")
@@ -96,6 +100,9 @@ def run_interactive():
     except (KeyboardInterrupt, EOFError):
         print("\nAborted.")
         sys.exit(0)
+    except ValueError as e:
+        print(f"\nInvalid input: {e}")
+        sys.exit(1)
 
     labs = LiverFailureLabs(
         inr=inr, bilirubin_mg_dl=bili, creatinine_mg_dl=cr,
@@ -158,9 +165,22 @@ def main(argv=None) -> int:
 
     if args.batch:
         path = Path(args.batch)
+        if not path.exists():
+            print(f"Error: File not found: {path}", file=sys.stderr)
+            return 1
+        if not path.is_file():
+            print(f"Error: Not a file: {path}", file=sys.stderr)
+            return 1
+        if path.suffix.lower() not in (".json", ".csv"):
+            print(f"Error: Unsupported file format '{path.suffix}'. Use .csv or .json", file=sys.stderr)
+            return 1
         evaluations = []
         if path.suffix.lower() == ".json":
-            records = json.loads(path.read_text(encoding="utf-8"))
+            try:
+                records = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"Error reading JSON file: {e}", file=sys.stderr)
+                return 1
             for r in records:
                 labs = LiverFailureLabs(
                     inr=float(r.get("inr", 1.0)),
@@ -217,7 +237,11 @@ def main(argv=None) -> int:
             out_str = "\n".join(out_lines)
 
         if args.output:
-            Path(args.output).write_text(out_str, encoding="utf-8")
+            try:
+                Path(args.output).write_text(out_str, encoding="utf-8")
+            except OSError as e:
+                print(f"Error writing output file: {e}", file=sys.stderr)
+                return 1
         else:
             print(out_str)
         return 0
@@ -265,7 +289,11 @@ def main(argv=None) -> int:
             out_str += f"    * {act}\n"
 
     if args.output:
-        Path(args.output).write_text(out_str, encoding="utf-8")
+        try:
+            Path(args.output).write_text(out_str, encoding="utf-8")
+        except OSError as e:
+            print(f"Error writing output file: {e}", file=sys.stderr)
+            return 1
     else:
         print(out_str)
 

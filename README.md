@@ -20,7 +20,7 @@ Requires Python standard library only (zero external runtime dependencies).
 
 ## Installation & Requirements
 
-- Python 3.10+ (tested on 3.10, 3.11, 3.12)
+- Python 3.9+ (tested on 3.10, 3.11, 3.12)
 - Zero external runtime dependencies. `pytest` is optional for running unit tests.
 
 ```bash
@@ -97,6 +97,27 @@ for action in dossier.urgent_actions:
     print(f" -> {action}")
 ```
 
+### 5. Output to File
+Write evaluation results to a file:
+```bash
+python cli.py --evaluate --patient-id PT-001 --etiology acetaminophen --ph 7.25 --inr 6.8 --cr 3.5 --he-grade 3 --json --output result.json
+```
+
+---
+
+## Input Validation
+
+All laboratory values are validated against physiologically plausible ranges:
+- INR: 0.1–50.0
+- Bilirubin: 0.0–100.0 mg/dL
+- Creatinine: 0.0–30.0 mg/dL
+- Arterial pH: 6.5–7.8
+- Lactate: 0.0–30.0 mmol/L
+- Sodium: 100.0–180.0 mEq/L
+- Ammonia: 0.0–500.0 µmol/L
+- Encephalopathy Grade: 0–4 (integer)
+- Age: 0–120 years
+
 ---
 
 ## Running Tests
@@ -108,4 +129,15 @@ python test_liver_failure_sentinel.py
 # or
 pytest -v
 ```
+
+The test suite includes:
+- 7 King's College Criteria tests
+- 4 MELD calculation tests
+- 2 ALFSG prognostic model tests
+- 3 Rumack-Matthew nomogram tests
+- 5 Encephalopathy & ammonia tests
+- 4 CLI execution tests
+- 5 input validation tests
+- 3 file validation tests
+- 1 output file test
 

@@ -14,7 +14,6 @@ Clinical Models Implemented:
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Tuple, Any
 import math
-import json
 
 
 @dataclass
@@ -31,6 +30,31 @@ class LiverFailureLabs:
     platelets_k_ul: float = 250.0
     glucose_mg_dl: float = 95.0
     on_dialysis: bool = False
+
+    def __post_init__(self):
+        """Validate laboratory values are within physiologically plausible ranges."""
+        if not (0.1 <= self.inr <= 50.0):
+            raise ValueError(f"INR must be between 0.1 and 50.0, got {self.inr}")
+        if not (0.0 <= self.bilirubin_mg_dl <= 100.0):
+            raise ValueError(f"Bilirubin must be between 0.0 and 100.0 mg/dL, got {self.bilirubin_mg_dl}")
+        if not (0.0 <= self.creatinine_mg_dl <= 30.0):
+            raise ValueError(f"Creatinine must be between 0.0 and 30.0 mg/dL, got {self.creatinine_mg_dl}")
+        if not (6.5 <= self.arterial_ph <= 7.8):
+            raise ValueError(f"Arterial pH must be between 6.5 and 7.8, got {self.arterial_ph}")
+        if not (0.0 <= self.lactate_mmol_l <= 30.0):
+            raise ValueError(f"Lactate must be between 0.0 and 30.0 mmol/L, got {self.lactate_mmol_l}")
+        if not (100.0 <= self.sodium_meq_l <= 180.0):
+            raise ValueError(f"Sodium must be between 100.0 and 180.0 mEq/L, got {self.sodium_meq_l}")
+        if not (0.0 <= self.ammonia_umol_l <= 500.0):
+            raise ValueError(f"Ammonia must be between 0.0 and 500.0 umol/L, got {self.ammonia_umol_l}")
+        if not (0.0 <= self.ast_u_l <= 50000.0):
+            raise ValueError(f"AST must be between 0.0 and 50000.0 U/L, got {self.ast_u_l}")
+        if not (0.0 <= self.alt_u_l <= 50000.0):
+            raise ValueError(f"ALT must be between 0.0 and 50000.0 U/L, got {self.alt_u_l}")
+        if not (0.0 <= self.platelets_k_ul <= 1500.0):
+            raise ValueError(f"Platelets must be between 0.0 and 1500.0 K/uL, got {self.platelets_k_ul}")
+        if not (0.0 <= self.glucose_mg_dl <= 1200.0):
+            raise ValueError(f"Glucose must be between 0.0 and 1200.0 mg/dL, got {self.glucose_mg_dl}")
 
 
 @dataclass
@@ -440,6 +464,12 @@ class AcuteLiverFailureDecisionEngine:
         apap_serum_ug_ml: Optional[float] = None,
         apap_ingestion_hours: Optional[float] = None,
     ) -> ComprehensiveALFEvaluation:
+        if not isinstance(he_grade, int) or not (0 <= he_grade <= 4):
+            raise ValueError(f"Hepatic encephalopathy grade must be an integer 0-4, got {he_grade}")
+        if not (0 <= age <= 120):
+            raise ValueError(f"Age must be between 0 and 120, got {age}")
+        if not isinstance(etiology, str) or not etiology.strip():
+            raise ValueError("Etiology must be a non-empty string")
         he_stage = self.he_stager.stage(he_grade)
 
         is_apap = ("acetaminophen" in etiology.lower() or "apap" in etiology.lower() or "paracetamol" in etiology.lower())

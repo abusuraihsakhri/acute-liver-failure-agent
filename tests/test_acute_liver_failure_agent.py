@@ -327,6 +327,111 @@ class TestAmmoniaAndExtendedCalculations(unittest.TestCase):
         self.assertEqual(len(data), 3)
 
 
+class TestInputValidation(unittest.TestCase):
+    """Tests for input validation and error handling."""
+
+    def test_labs_negative_inr_rejected(self):
+        with self.assertRaises(ValueError):
+            LiverFailureLabs(inr=-1.0)
+
+    def test_labs_negative_bilirubin_rejected(self):
+        with self.assertRaises(ValueError):
+            LiverFailureLabs(bilirubin_mg_dl=-5.0)
+
+    def test_labs_extreme_ph_rejected(self):
+        with self.assertRaises(ValueError):
+            LiverFailureLabs(arterial_ph=8.5)
+
+    def test_labs_negative_creatinine_rejected(self):
+        with self.assertRaises(ValueError):
+            LiverFailureLabs(creatinine_mg_dl=-0.5)
+
+    def test_labs_valid_values_accepted(self):
+        labs = LiverFailureLabs(inr=2.5, bilirubin_mg_dl=10.0, creatinine_mg_dl=2.0)
+        self.assertEqual(labs.inr, 2.5)
+
+    def test_he_grade_out_of_range_rejected(self):
+        engine = AcuteLiverFailureDecisionEngine()
+        labs = LiverFailureLabs()
+        with self.assertRaises(ValueError):
+            engine.evaluate_patient("PT", labs, he_grade=5)
+        with self.assertRaises(ValueError):
+            engine.evaluate_patient("PT", labs, he_grade=-1)
+
+    def test_he_grade_non_integer_rejected(self):
+        engine = AcuteLiverFailureDecisionEngine()
+        labs = LiverFailureLabs()
+        with self.assertRaises(ValueError):
+            engine.evaluate_patient("PT", labs, he_grade=2.5)
+
+    def test_invalid_age_rejected(self):
+        engine = AcuteLiverFailureDecisionEngine()
+        labs = LiverFailureLabs()
+        with self.assertRaises(ValueError):
+            engine.evaluate_patient("PT", labs, he_grade=2, age=150)
+        with self.assertRaises(ValueError):
+            engine.evaluate_patient("PT", labs, he_grade=2, age=-5)
+
+    def test_empty_etiology_rejected(self):
+        engine = AcuteLiverFailureDecisionEngine()
+        labs = LiverFailureLabs()
+        with self.assertRaises(ValueError):
+            engine.evaluate_patient("PT", labs, he_grade=2, etiology="")
+
+
+class TestCLIBatchFileValidation(unittest.TestCase):
+    """Tests for CLI batch file validation."""
+
+    def test_batch_nonexistent_file(self):
+        code = cli.main(["--batch", "nonexistent_file.csv"])
+        self.assertEqual(code, 1)
+
+    def test_batch_unsupported_format(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("test")
+            temp_path = f.name
+        try:
+            code = cli.main(["--batch", temp_path])
+            self.assertEqual(code, 1)
+        finally:
+            os.remove(temp_path)
+
+    def test_batch_invalid_json(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("not valid json{{{")
+            temp_path = f.name
+        try:
+            code = cli.main(["--batch", temp_path])
+            self.assertEqual(code, 1)
+        finally:
+            os.remove(temp_path)
+
+
+class TestCLIOutputFile(unittest.TestCase):
+    """Tests for CLI output file handling."""
+
+    def test_cli_output_to_file(self):
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            temp_path = f.name
+        try:
+            code = cli.main([
+                "--evaluate",
+                "--patient-id", "PT-OUT-TEST",
+                "--ph", "7.25",
+                "--format", "json",
+                "--output", temp_path,
+            ])
+            self.assertEqual(code, 0)
+            content = Path(temp_path).read_text(encoding="utf-8")
+            data = json.loads(content)
+            self.assertEqual(data["patient_id"], "PT-OUT-TEST")
+        finally:
+            os.remove(temp_path)
+
+
 if __name__ == "__main__":
     unittest.main()
 
