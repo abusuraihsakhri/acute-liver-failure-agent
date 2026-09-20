@@ -1,27 +1,35 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "acute-liver-failure-engine"
-version = "2.0.0"
-description = "LiverFailure Sentinel: King's College & ALFSG Prognostication Engine"
+version = "3.0.0"
+description = "Acute liver failure prognostic decision-support calculations and CLI"
 readme = "README.md"
-authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
+authors = [{ name = "Abu Suraih Sakhri" }]
 license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = []
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-requires-python = ">=3.9"
-dependencies = []
 
 [project.scripts]
-acute-liver-failure-engine = "acute_liver_failure_agent.cli:main"
+acute-liver-failure-agent = "cli:main"
+acute-liver-failure-engine = "cli:main"
 
 [project.urls]
-Homepage = "https://github.com/abusuraihsakhri/acute-liver-failure-engine"
-Repository = "https://github.com/abusuraihsakhri/acute-liver-failure-engine.git"
+Homepage = "https://github.com/abusuraihsakhri/acute-liver-failure-agent"
+Repository = "https://github.com/abusuraihsakhri/acute-liver-failure-agent.git"
+
+[tool.setuptools]
+packages = ["acute_liver_failure_agent"]
+py-modules = ["liver_failure_prognostic", "cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

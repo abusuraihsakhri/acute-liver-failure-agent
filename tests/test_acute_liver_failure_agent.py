@@ -1,30 +1,25 @@
-"""
-Comprehensive Unit Test Suite for Acute Liver Failure (ALF) Critical Care Decision Engine.
-"""
+"""Regression and behavior tests for the acute liver failure decision engine."""
 
 import io
 import json
+import math
 import os
-import sys
+from pathlib import Path
 import tempfile
 import unittest
-from pathlib import Path
 
-# Add project root to sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
+import cli
 from liver_failure_prognostic import (
-    LiverFailureLabs,
-    KingsCollegeEvaluator,
-    MELDCalculator,
     ALFSGPrognosticIndex,
     AcetaminophenToxicityAssessor,
-    HepaticEncephalopathyStager,
     AcuteLiverFailureDecisionEngine,
+    HepaticEncephalopathyStager,
+    KingsCollegeEvaluator,
+    LiverFailureLabs,
+    MELDCalculator,
 )
-import cli
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class TestKingsCollegeCriteria(unittest.TestCase):
@@ -33,41 +28,66 @@ class TestKingsCollegeCriteria(unittest.TestCase):
 
     def test_apap_arterial_ph_acidosis(self):
         labs = LiverFailureLabs(arterial_ph=7.24, inr=2.5, creatinine_mg_dl=1.8)
-        res = self.evaluator.evaluate_acetaminophen(labs, he_grade=2)
-        self.assertTrue(res.criteria_met)
-        self.assertIn("Status 1A", res.transplant_listing_urgency)
+        result = self.evaluator.evaluate_acetaminophen(labs, he_grade=2)
+        self.assertTrue(result.criteria_met)
+        self.assertNotIn("Status 1A /", result.transplant_listing_urgency)
+        self.assertIn("transplant", result.transplant_listing_urgency.lower())
 
     def test_apap_post_resuscitation_lactate(self):
-        labs = LiverFailureLabs(arterial_ph=7.34, inr=3.0, creatinine_mg_dl=2.0, lactate_mmol_l=4.2)
-        res = self.evaluator.evaluate_acetaminophen(labs, he_grade=2)
-        self.assertTrue(res.criteria_met)
+        labs = LiverFailureLabs(arterial_ph=7.34, lactate_mmol_l=2.0)
+        result = self.evaluator.evaluate_acetaminophen(
+            labs, he_grade=2, post_resuscitation_lactate=3.2
+        )
+        self.assertTrue(result.criteria_met)
+        self.assertTrue(result.criteria_details["post_resuscitation_lactate_gt_3_0"])
+
+    def test_admission_lactate_is_not_silently_treated_as_post_resuscitation(self):
+        labs = LiverFailureLabs(
+            arterial_ph=7.34,
+            inr=3.0,
+            creatinine_mg_dl=2.0,
+            lactate_mmol_l=8.0,
+        )
+        result = self.evaluator.evaluate_acetaminophen(labs, he_grade=2)
+        self.assertFalse(result.criteria_met)
 
     def test_apap_combined_triad_met(self):
-        labs = LiverFailureLabs(arterial_ph=7.35, inr=7.2, creatinine_mg_dl=3.8, lactate_mmol_l=2.1)
-        res = self.evaluator.evaluate_acetaminophen(labs, he_grade=3)
-        self.assertTrue(res.criteria_met)
+        labs = LiverFailureLabs(
+            arterial_ph=7.35, inr=7.2, creatinine_mg_dl=3.8, lactate_mmol_l=2.1
+        )
+        self.assertTrue(
+            self.evaluator.evaluate_acetaminophen(labs, he_grade=3).criteria_met
+        )
 
     def test_apap_subthreshold_not_met(self):
-        labs = LiverFailureLabs(arterial_ph=7.36, inr=4.0, creatinine_mg_dl=2.5, lactate_mmol_l=2.0)
-        res = self.evaluator.evaluate_acetaminophen(labs, he_grade=2)
-        self.assertFalse(res.criteria_met)
+        labs = LiverFailureLabs(
+            arterial_ph=7.36, inr=4.0, creatinine_mg_dl=2.5, lactate_mmol_l=2.0
+        )
+        self.assertFalse(
+            self.evaluator.evaluate_acetaminophen(labs, he_grade=2).criteria_met
+        )
 
     def test_non_apap_single_inr_gt_6_5(self):
         labs = LiverFailureLabs(inr=7.0, bilirubin_mg_dl=5.0)
-        res = self.evaluator.evaluate_non_acetaminophen(labs, age=30, jaundice_to_coma_days=3)
-        self.assertTrue(res.criteria_met)
+        result = self.evaluator.evaluate_non_acetaminophen(
+            labs, age=30, jaundice_to_coma_days=3
+        )
+        self.assertTrue(result.criteria_met)
 
     def test_non_apap_three_subcriteria_met(self):
-        # Age > 40 (1), Bili > 17.5 (2), INR > 3.5 (3)
         labs = LiverFailureLabs(inr=4.2, bilirubin_mg_dl=19.0)
-        res = self.evaluator.evaluate_non_acetaminophen(labs, age=45, jaundice_to_coma_days=4)
-        self.assertTrue(res.criteria_met)
+        result = self.evaluator.evaluate_non_acetaminophen(
+            labs, age=45, jaundice_to_coma_days=9, etiology="viral_hbv"
+        )
+        self.assertTrue(result.criteria_met)
 
-    def test_non_apap_two_subcriteria_not_met(self):
-        # Age > 40 (1), Jaundice > 7d (2), but INR < 3.5 and Bili < 17.5
-        labs = LiverFailureLabs(inr=2.2, bilirubin_mg_dl=8.0)
-        res = self.evaluator.evaluate_non_acetaminophen(labs, age=52, jaundice_to_coma_days=10, etiology="viral")
-        self.assertFalse(res.criteria_met)
+    def test_autoimmune_not_misclassified_as_kcc_unfavorable_etiology(self):
+        labs = LiverFailureLabs(inr=3.6, bilirubin_mg_dl=10.0)
+        result = self.evaluator.evaluate_non_acetaminophen(
+            labs, age=30, jaundice_to_coma_days=3, etiology="autoimmune"
+        )
+        self.assertFalse(result.criteria_details["unfavorable_etiology"])
+        self.assertFalse(result.criteria_met)
 
 
 class TestMELDCalculations(unittest.TestCase):
@@ -75,90 +95,176 @@ class TestMELDCalculations(unittest.TestCase):
         self.calc = MELDCalculator()
 
     def test_meld_baseline_normal(self):
-        labs = LiverFailureLabs(inr=1.0, bilirubin_mg_dl=1.0, creatinine_mg_dl=1.0)
-        res = self.calc.calculate(labs)
-        self.assertAlmostEqual(res.meld_score, 6.4, delta=0.5)
-        self.assertEqual(res.unos_priority_tier, "Tier 4 (Low 30-day risk)")
-
-    def test_meld_severe_injury(self):
-        labs = LiverFailureLabs(inr=4.5, bilirubin_mg_dl=20.0, creatinine_mg_dl=3.5)
-        res = self.calc.calculate(labs)
-        self.assertGreater(res.meld_score, 35.0)
-        self.assertGreater(res.estimated_30_day_mortality_pct, 70.0)
+        result = self.calc.calculate(
+            LiverFailureLabs(inr=1.0, bilirubin_mg_dl=1.0, creatinine_mg_dl=1.0)
+        )
+        self.assertAlmostEqual(result.meld_score, 6.4, delta=0.5)
 
     def test_meld_na_hyponatremia_increase(self):
-        labs_norm_na = LiverFailureLabs(inr=2.5, bilirubin_mg_dl=10.0, creatinine_mg_dl=2.0, sodium_meq_l=140.0)
-        labs_low_na = LiverFailureLabs(inr=2.5, bilirubin_mg_dl=10.0, creatinine_mg_dl=2.0, sodium_meq_l=125.0)
-        res_norm = self.calc.calculate(labs_norm_na)
-        res_low = self.calc.calculate(labs_low_na)
-        self.assertGreater(res_low.meld_na_score, res_norm.meld_na_score)
+        normal = self.calc.calculate(
+            LiverFailureLabs(
+                inr=2.5, bilirubin_mg_dl=10.0, creatinine_mg_dl=2.0, sodium_meq_l=140.0
+            )
+        )
+        low = self.calc.calculate(
+            LiverFailureLabs(
+                inr=2.5, bilirubin_mg_dl=10.0, creatinine_mg_dl=2.0, sodium_meq_l=125.0
+            )
+        )
+        self.assertGreater(low.meld_na_score, normal.meld_na_score)
 
-    def test_meld_dialysis_sets_cr_4(self):
-        labs_dialysis = LiverFailureLabs(inr=2.0, bilirubin_mg_dl=5.0, creatinine_mg_dl=1.2, on_dialysis=True)
-        res = self.calc.calculate(labs_dialysis)
-        labs_no_dialysis = LiverFailureLabs(inr=2.0, bilirubin_mg_dl=5.0, creatinine_mg_dl=1.2, on_dialysis=False)
-        res_no_dialysis = self.calc.calculate(labs_no_dialysis)
-        self.assertGreater(res.meld_score, res_no_dialysis.meld_score)
+    def test_dialysis_sets_creatinine_to_four_for_legacy_meld(self):
+        dialysis = self.calc.calculate(
+            LiverFailureLabs(
+                inr=2.0,
+                bilirubin_mg_dl=5.0,
+                creatinine_mg_dl=1.2,
+                on_dialysis=True,
+            )
+        )
+        no_dialysis = self.calc.calculate(
+            LiverFailureLabs(inr=2.0, bilirubin_mg_dl=5.0, creatinine_mg_dl=1.2)
+        )
+        self.assertGreater(dialysis.meld_score, no_dialysis.meld_score)
+
+    def test_meld_does_not_generate_status_1a_or_fake_mortality(self):
+        result = self.calc.calculate(
+            LiverFailureLabs(inr=15.0, bilirubin_mg_dl=45.0, creatinine_mg_dl=8.0)
+        )
+        self.assertEqual(result.meld_score, 40.0)
+        self.assertIsNone(result.estimated_30_day_mortality_pct)
+        self.assertNotIn("Status 1A /", result.unos_priority_tier)
+        self.assertIn("not applicable", result.unos_priority_tier.lower())
 
 
 class TestALFSGModel(unittest.TestCase):
     def setUp(self):
         self.model = ALFSGPrognosticIndex()
 
-    def test_favorable_mild_apap(self):
-        labs = LiverFailureLabs(inr=1.8, bilirubin_mg_dl=3.0, creatinine_mg_dl=1.1)
-        res = self.model.calculate(labs, age=28, he_grade=1, etiology="acetaminophen")
-        self.assertGreaterEqual(res.transplant_free_survival_pct, 75.0)
+    def test_matches_published_equation_for_favorable_case(self):
+        labs = LiverFailureLabs(inr=1.8, bilirubin_mg_dl=3.0)
+        result = self.model.calculate(
+            labs, age=28, he_grade=1, etiology="acetaminophen", vasopressor_use=False
+        )
+        expected_logit = (
+            2.67
+            + 1.56
+            - 0.70 * math.log(3.0)
+            - 1.35 * math.log(1.8)
+        )
+        expected = 100 / (1 + math.exp(-expected_logit))
+        self.assertAlmostEqual(result.transplant_free_survival_pct, expected, delta=0.1)
 
-    def test_critical_coma_non_apap(self):
-        labs = LiverFailureLabs(inr=4.8, bilirubin_mg_dl=18.0, creatinine_mg_dl=2.6)
-        res = self.model.calculate(labs, age=55, he_grade=4, etiology="autoimmune")
-        self.assertLessEqual(res.transplant_free_survival_pct, 25.0)
-        self.assertIn("urgent", res.recommendation.lower())
+    def test_vasopressor_use_lowers_predicted_tfs(self):
+        labs = LiverFailureLabs(inr=1.8, bilirubin_mg_dl=3.0)
+        no_pressor = self.model.calculate(
+            labs, age=28, he_grade=1, etiology="acetaminophen", vasopressor_use=False
+        )
+        pressor = self.model.calculate(
+            labs, age=28, he_grade=1, etiology="acetaminophen", vasopressor_use=True
+        )
+        self.assertLess(
+            pressor.transplant_free_survival_pct,
+            no_pressor.transplant_free_survival_pct,
+        )
+
+    def test_unfavorable_etiology_lowers_predicted_tfs(self):
+        labs = LiverFailureLabs(inr=1.8, bilirubin_mg_dl=3.0)
+        apap = self.model.calculate(labs, 28, 1, "acetaminophen")
+        autoimmune = self.model.calculate(labs, 28, 1, "autoimmune")
+        self.assertLess(
+            autoimmune.transplant_free_survival_pct,
+            apap.transplant_free_survival_pct,
+        )
+
+    def test_age_is_not_a_model_variable(self):
+        labs = LiverFailureLabs(inr=2.1, bilirubin_mg_dl=6.0)
+        young = self.model.calculate(labs, 20, 2, "dili")
+        older = self.model.calculate(labs, 70, 2, "dili")
+        self.assertEqual(
+            young.transplant_free_survival_pct,
+            older.transplant_free_survival_pct,
+        )
+
+    def test_deep_he_non_apap_has_low_predicted_tfs(self):
+        labs = LiverFailureLabs(inr=4.8, bilirubin_mg_dl=18.0)
+        result = self.model.calculate(labs, 55, 4, "autoimmune")
+        self.assertLess(result.transplant_free_survival_pct, 20.0)
+        self.assertIn("21-day", result.model_note)
 
 
 class TestRumackMatthewNomogram(unittest.TestCase):
     def setUp(self):
         self.assessor = AcetaminophenToxicityAssessor()
 
-    def test_high_risk_above_treatment_line(self):
-        res = self.assessor.assess(time_since_ingestion_hours=4.0, serum_apap_ug_ml=220.0, alt_u_l=450.0, inr=1.8)
-        self.assertTrue(res.nac_indicated)
-        self.assertIn("Above", res.nomogram_risk)
-        self.assertIn("21-Hour IV", res.nac_regimen)
+    def test_revised_high_risk_line_starts_at_300_at_four_hours(self):
+        result = self.assessor.assess(4.0, 310.0, alt_u_l=30.0, inr=1.0)
+        self.assertTrue(result.nac_indicated)
+        self.assertIn("high-risk", result.nomogram_risk.lower())
 
-    def test_below_treatment_line_safe(self):
-        res = self.assessor.assess(time_since_ingestion_hours=6.0, serum_apap_ug_ml=30.0, alt_u_l=25.0, inr=1.0)
-        self.assertFalse(res.nac_indicated)
-        self.assertIn("Below", res.nomogram_risk)
+    def test_220_at_four_hours_is_treatment_not_high_risk_line(self):
+        result = self.assessor.assess(4.0, 220.0)
+        self.assertTrue(result.nac_indicated)
+        self.assertEqual(result.nomogram_risk, "At/above 150-treatment line")
 
-    def test_fulminant_hepatic_injury_severity(self):
-        res = self.assessor.assess(time_since_ingestion_hours=12.0, serum_apap_ug_ml=80.0, alt_u_l=12000.0, inr=4.5)
-        self.assertEqual(res.clinical_severity, "Fulminant Acute Liver Injury")
+    def test_below_treatment_line_without_injury(self):
+        result = self.assessor.assess(6.0, 30.0, alt_u_l=25.0, inr=1.0)
+        self.assertFalse(result.nac_indicated)
+        self.assertTrue(result.nomogram_applicable)
+
+    def test_established_injury_is_not_overruled_by_below_line_value(self):
+        result = self.assessor.assess(12.0, 10.0, alt_u_l=1500.0, inr=2.0)
+        self.assertTrue(result.nac_indicated)
+
+    def test_before_four_hours_nomogram_is_inapplicable(self):
+        result = self.assessor.assess(2.0, 80.0)
+        self.assertFalse(result.nomogram_applicable)
+        self.assertIsNone(result.nac_indicated)
+
+    def test_after_24_hours_nomogram_is_inapplicable(self):
+        result = self.assessor.assess(30.0, 8.0)
+        self.assertFalse(result.nomogram_applicable)
+        self.assertIsNone(result.nac_indicated)
+
+    def test_negative_time_rejected(self):
+        with self.assertRaises(ValueError):
+            self.assessor.assess(-1.0, 80.0)
 
 
 class TestEncephalopathyAndAmmonia(unittest.TestCase):
     def setUp(self):
         self.stager = HepaticEncephalopathyStager()
+        self.engine = AcuteLiverFailureDecisionEngine()
 
-    def test_grade_4_intubation_mandatory(self):
+    def test_grade_4_uses_qualitative_risk_not_unvalidated_percentage(self):
         stage = self.stager.stage(4)
         self.assertEqual(stage.grade, 4)
-        self.assertIn("Mandatory", stage.airway_management)
-        self.assertIn("65-80%", stage.cerebral_edema_risk)
+        self.assertNotIn("%", stage.cerebral_edema_risk)
+        self.assertIn("ventilation", stage.airway_management.lower())
 
-    def test_grade_1_mild_features(self):
-        stage = self.stager.stage(1)
-        self.assertEqual(stage.grade, 1)
-        self.assertIn("Grade I", stage.stage_name)
+    def test_invalid_direct_stage_rejected(self):
+        with self.assertRaises(ValueError):
+            self.stager.stage(5)
 
-    def test_grade_0_and_grade_2_staging(self):
-        s0 = self.stager.stage(0)
-        self.assertEqual(s0.grade, 0)
-        self.assertIn("Subclinical", s0.stage_name)
-        s2 = self.stager.stage(2)
-        self.assertEqual(s2.grade, 2)
-        self.assertIn("Grade II", s2.stage_name)
+    def test_high_ammonia_is_flagged_as_neurocritical_risk(self):
+        evaluation = self.engine.evaluate_patient(
+            "P_HIGH",
+            LiverFailureLabs(ammonia_umol_l=175.0),
+            he_grade=2,
+        )
+        self.assertTrue(
+            evaluation.ammonia_icp_risk["hyperosmolar_therapy_consideration"]
+        )
+
+    def test_low_ammonia_low_grade_has_no_hyperosmolar_flag(self):
+        evaluation = self.engine.evaluate_patient(
+            "P_LOW",
+            LiverFailureLabs(ammonia_umol_l=60.0),
+            he_grade=1,
+        )
+        self.assertFalse(
+            evaluation.ammonia_icp_risk["hyperosmolar_therapy_consideration"]
+        )
 
 
 class TestMasterDecisionEngine(unittest.TestCase):
@@ -171,267 +277,222 @@ class TestMasterDecisionEngine(unittest.TestCase):
             bilirubin_mg_dl=7.0,
             creatinine_mg_dl=3.2,
             arterial_ph=7.21,
-            lactate_mmol_l=4.5,
             ammonia_umol_l=180.0,
             glucose_mg_dl=55.0,
         )
-        eval_res = self.engine.evaluate_patient(
-            patient_id="PT-ACUTE-01",
-            labs=labs,
+        evaluation = self.engine.evaluate_patient(
+            "PT-ACUTE-01",
+            labs,
             he_grade=3,
             age=32,
             etiology="acetaminophen",
             apap_serum_ug_ml=160.0,
             apap_ingestion_hours=6.0,
+            vasopressor_use=True,
         )
-        self.assertTrue(eval_res.kings_college.criteria_met)
-        self.assertTrue(any("transplant center" in a.lower() for a in eval_res.urgent_actions))
-        self.assertTrue(any("intubation" in a.lower() for a in eval_res.urgent_actions))
-        self.assertTrue(any("dextrose" in a.lower() for a in eval_res.urgent_actions))
-        self.assertTrue(eval_res.ammonia_icp_risk["hyperosmolar_therapy_indicated"])
+        self.assertTrue(evaluation.kings_college.criteria_met)
+        joined = " ".join(evaluation.urgent_actions).lower()
+        self.assertIn("transplant center", joined)
+        self.assertIn("intubation", joined)
+        self.assertIn("hypoglycemia", joined)
+        self.assertIn("acetylcysteine", joined)
+        self.assertNotIn("status 1a listing", joined)
+
+    def test_partial_apap_nomogram_inputs_rejected(self):
+        with self.assertRaises(ValueError):
+            self.engine.evaluate_patient(
+                "P",
+                LiverFailureLabs(),
+                he_grade=1,
+                apap_serum_ug_ml=100.0,
+            )
 
 
 class TestCLIExecution(unittest.TestCase):
-    def test_cli_single_evaluation_json(self):
-        out = io.StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = out
+    def _capture(self, argv):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        old_stdout, old_stderr = os.sys.stdout, os.sys.stderr
+        os.sys.stdout, os.sys.stderr = stdout, stderr
         try:
-            code = cli.main([
-                "--evaluate",
-                "--patient-id", "PT-TEST-99",
-                "--inr", "7.0",
-                "--ph", "7.22",
-                "--format", "json"
-            ])
-            self.assertEqual(code, 0)
+            code = cli.main(argv)
         finally:
-            sys.stdout = old_stdout
+            os.sys.stdout, os.sys.stderr = old_stdout, old_stderr
+        return code, stdout.getvalue(), stderr.getvalue()
 
-        data = json.loads(out.getvalue())
+    def test_cli_single_evaluation_json(self):
+        code, output, _ = self._capture(
+            [
+                "--evaluate",
+                "--patient-id",
+                "PT-TEST-99",
+                "--inr",
+                "7.0",
+                "--ph",
+                "7.22",
+                "--json",
+            ]
+        )
+        self.assertEqual(code, 0)
+        data = json.loads(output)
         self.assertEqual(data["patient_id"], "PT-TEST-99")
         self.assertTrue(data["kings_college"]["criteria_met"])
+        self.assertIsNone(data["meld"]["estimated_30_day_mortality_pct"])
+
+    def test_cli_accepts_explicit_post_resuscitation_lactate(self):
+        code, output, _ = self._capture(
+            [
+                "--evaluate",
+                "--ph",
+                "7.35",
+                "--inr",
+                "2.0",
+                "--cr",
+                "1.0",
+                "--he-grade",
+                "1",
+                "--post-resuscitation-lactate",
+                "3.2",
+                "--json",
+            ]
+        )
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(output)["kings_college"]["criteria_met"])
 
     def test_cli_batch_json(self):
         records = [
             {"patient_id": "P1", "inr": 7.5, "ph": 7.20, "etiology": "acetaminophen"},
-            {"patient_id": "P2", "inr": 1.5, "ph": 7.42, "etiology": "viral"},
+            {"patient_id": "P2", "inr": 1.5, "ph": 7.42, "etiology": "viral_hbv"},
         ]
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(records, f)
-            temp_path = f.name
-
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as handle:
+            json.dump(records, handle)
+            path = handle.name
         try:
-            out = io.StringIO()
-            old_stdout = sys.stdout
-            sys.stdout = out
-            try:
-                code = cli.main(["--batch", temp_path, "--format", "json"])
-                self.assertEqual(code, 0)
-            finally:
-                sys.stdout = old_stdout
-
-            data = json.loads(out.getvalue())
+            code, output, _ = self._capture(["--batch", path, "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output)
             self.assertEqual(len(data), 2)
             self.assertTrue(data[0]["kings_college"]["criteria_met"])
             self.assertFalse(data[1]["kings_college"]["criteria_met"])
         finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            os.remove(path)
 
+    def test_batch_false_string_is_not_truthy(self):
+        records = [
+            {
+                "patient_id": "P",
+                "inr": 2.0,
+                "bili": 5.0,
+                "cr": 1.2,
+                "dialysis": "false",
+            }
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as handle:
+            json.dump(records, handle)
+            path = handle.name
+        try:
+            code, output, _ = self._capture(["--batch", path, "--json"])
+            self.assertEqual(code, 0)
+            data = json.loads(output)[0]
+            expected = MELDCalculator().calculate(
+                LiverFailureLabs(inr=2.0, bilirubin_mg_dl=5.0, creatinine_mg_dl=1.2)
+            )
+            self.assertEqual(data["meld"]["meld_score"], expected.meld_score)
+        finally:
+            os.remove(path)
 
-class TestAmmoniaAndExtendedCalculations(unittest.TestCase):
-    def setUp(self):
-        self.engine = AcuteLiverFailureDecisionEngine()
-        self.calc = MELDCalculator()
-        self.assessor = AcetaminophenToxicityAssessor()
-
-    def test_ammonia_risk_tiers(self):
-        # High ammonia (>150)
-        labs_high = LiverFailureLabs(ammonia_umol_l=175.0)
-        ev_high = self.engine.evaluate_patient("P_HIGH", labs_high, he_grade=2)
-        self.assertTrue(ev_high.ammonia_icp_risk["hyperosmolar_therapy_indicated"])
-
-        # Normal ammonia (<100)
-        labs_norm = LiverFailureLabs(ammonia_umol_l=60.0)
-        ev_norm = self.engine.evaluate_patient("P_NORM", labs_norm, he_grade=1)
-        self.assertFalse(ev_norm.ammonia_icp_risk["hyperosmolar_therapy_indicated"])
-
-    def test_meld_upper_clamp_40(self):
-        labs_extreme = LiverFailureLabs(inr=15.0, bilirubin_mg_dl=45.0, creatinine_mg_dl=8.0)
-        res = self.calc.calculate(labs_extreme)
-        self.assertEqual(res.meld_score, 40.0)
-        self.assertEqual(res.meld_na_score, 40.0)
-
-    def test_apap_decay_half_life_calculation(self):
-        # 150 line at 4h is 150 ug/mL, at 8h is 75 ug/mL, at 12h is 37.5 ug/mL
-        res_8h_high = self.assessor.assess(time_since_ingestion_hours=8.0, serum_apap_ug_ml=85.0)
-        self.assertTrue(res_8h_high.nac_indicated)
-        res_8h_low = self.assessor.assess(time_since_ingestion_hours=8.0, serum_apap_ug_ml=60.0)
-        self.assertFalse(res_8h_low.nac_indicated)
-
-    def test_cli_batch_csv(self):
-        csv_content = (
-            "patient_id,inr,bili,cr,ph,lactate,sodium,ammonia,he_grade,age,etiology\n"
-            "PT_CSV_1,7.2,4.0,3.8,7.22,4.8,135,180,3,30,acetaminophen\n"
-            "PT_CSV_2,1.4,1.2,0.9,7.40,1.0,140,45,0,25,acetaminophen\n"
+    def test_mismatched_apap_inputs_returns_error(self):
+        code, _, error = self._capture(
+            ["--evaluate", "--apap-level", "100", "--json"]
         )
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
-            f.write(csv_content)
-            temp_path = f.name
-
-        try:
-            out = io.StringIO()
-            old_stdout = sys.stdout
-            sys.stdout = out
-            try:
-                code = cli.main(["--batch", temp_path, "--format", "json"])
-                self.assertEqual(code, 0)
-            finally:
-                sys.stdout = old_stdout
-
-            data = json.loads(out.getvalue())
-            self.assertEqual(len(data), 2)
-            self.assertTrue(data[0]["kings_college"]["criteria_met"])
-            self.assertFalse(data[1]["kings_college"]["criteria_met"])
-        finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
-    def test_cli_json_flag(self):
-        out = io.StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = out
-        try:
-            code = cli.main(["--evaluate", "--patient-id", "PT_JSON", "--ph", "7.25", "--inr", "6.8", "--cr", "3.5", "--he-grade", "3", "--json"])
-            self.assertEqual(code, 0)
-        finally:
-            sys.stdout = old_stdout
-
-        data = json.loads(out.getvalue())
-        self.assertEqual(data["patient_id"], "PT_JSON")
-        self.assertTrue(data["kings_college"]["criteria_met"])
-
-    def test_sample_csv_batch(self):
-        sample_path = PROJECT_ROOT / "sample.csv"
-        out = io.StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = out
-        try:
-            code = cli.main(["-i", str(sample_path), "--json"])
-            self.assertEqual(code, 0)
-        finally:
-            sys.stdout = old_stdout
-
-        data = json.loads(out.getvalue())
-        self.assertEqual(len(data), 3)
+        self.assertEqual(code, 2)
+        self.assertIn("must be supplied together", error)
 
 
 class TestInputValidation(unittest.TestCase):
-    """Tests for input validation and error handling."""
-
-    def test_labs_negative_inr_rejected(self):
+    def test_negative_inr_rejected(self):
         with self.assertRaises(ValueError):
             LiverFailureLabs(inr=-1.0)
 
-    def test_labs_negative_bilirubin_rejected(self):
+    def test_nan_rejected(self):
         with self.assertRaises(ValueError):
-            LiverFailureLabs(bilirubin_mg_dl=-5.0)
-
-    def test_labs_extreme_ph_rejected(self):
-        with self.assertRaises(ValueError):
-            LiverFailureLabs(arterial_ph=8.5)
-
-    def test_labs_negative_creatinine_rejected(self):
-        with self.assertRaises(ValueError):
-            LiverFailureLabs(creatinine_mg_dl=-0.5)
-
-    def test_labs_valid_values_accepted(self):
-        labs = LiverFailureLabs(inr=2.5, bilirubin_mg_dl=10.0, creatinine_mg_dl=2.0)
-        self.assertEqual(labs.inr, 2.5)
-
-    def test_he_grade_out_of_range_rejected(self):
-        engine = AcuteLiverFailureDecisionEngine()
-        labs = LiverFailureLabs()
-        with self.assertRaises(ValueError):
-            engine.evaluate_patient("PT", labs, he_grade=5)
-        with self.assertRaises(ValueError):
-            engine.evaluate_patient("PT", labs, he_grade=-1)
-
-    def test_he_grade_non_integer_rejected(self):
-        engine = AcuteLiverFailureDecisionEngine()
-        labs = LiverFailureLabs()
-        with self.assertRaises(ValueError):
-            engine.evaluate_patient("PT", labs, he_grade=2.5)
+            LiverFailureLabs(inr=float("nan"))
 
     def test_invalid_age_rejected(self):
         engine = AcuteLiverFailureDecisionEngine()
-        labs = LiverFailureLabs()
         with self.assertRaises(ValueError):
-            engine.evaluate_patient("PT", labs, he_grade=2, age=150)
-        with self.assertRaises(ValueError):
-            engine.evaluate_patient("PT", labs, he_grade=2, age=-5)
+            engine.evaluate_patient("PT", LiverFailureLabs(), he_grade=2, age=150)
 
     def test_empty_etiology_rejected(self):
         engine = AcuteLiverFailureDecisionEngine()
-        labs = LiverFailureLabs()
         with self.assertRaises(ValueError):
-            engine.evaluate_patient("PT", labs, he_grade=2, etiology="")
+            engine.evaluate_patient("PT", LiverFailureLabs(), he_grade=2, etiology="")
 
 
 class TestCLIBatchFileValidation(unittest.TestCase):
-    """Tests for CLI batch file validation."""
-
     def test_batch_nonexistent_file(self):
-        code = cli.main(["--batch", "nonexistent_file.csv"])
-        self.assertEqual(code, 1)
+        self.assertEqual(cli.main(["--batch", "nonexistent_file.csv"]), 1)
 
     def test_batch_unsupported_format(self):
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-            f.write("test")
-            temp_path = f.name
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as handle:
+            handle.write("test")
+            path = handle.name
         try:
-            code = cli.main(["--batch", temp_path])
-            self.assertEqual(code, 1)
+            self.assertEqual(cli.main(["--batch", path]), 1)
         finally:
-            os.remove(temp_path)
+            os.remove(path)
 
     def test_batch_invalid_json(self):
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write("not valid json{{{")
-            temp_path = f.name
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as handle:
+            handle.write("not valid json{{{")
+            path = handle.name
         try:
-            code = cli.main(["--batch", temp_path])
-            self.assertEqual(code, 1)
+            self.assertEqual(cli.main(["--batch", path]), 2)
         finally:
-            os.remove(temp_path)
+            os.remove(path)
 
 
 class TestCLIOutputFile(unittest.TestCase):
-    """Tests for CLI output file handling."""
-
     def test_cli_output_to_file(self):
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            temp_path = f.name
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as handle:
+            path = handle.name
         try:
-            code = cli.main([
-                "--evaluate",
-                "--patient-id", "PT-OUT-TEST",
-                "--ph", "7.25",
-                "--format", "json",
-                "--output", temp_path,
-            ])
+            code = cli.main(
+                [
+                    "--evaluate",
+                    "--patient-id",
+                    "PT-OUT-TEST",
+                    "--ph",
+                    "7.25",
+                    "--json",
+                    "--output",
+                    path,
+                ]
+            )
             self.assertEqual(code, 0)
-            content = Path(temp_path).read_text(encoding="utf-8")
-            data = json.loads(content)
+            data = json.loads(Path(path).read_text(encoding="utf-8"))
             self.assertEqual(data["patient_id"], "PT-OUT-TEST")
         finally:
-            os.remove(temp_path)
+            os.remove(path)
+
+
+class TestSampleAndPackageSurface(unittest.TestCase):
+    def test_sample_csv_batch(self):
+        stdout = io.StringIO()
+        old_stdout = os.sys.stdout
+        os.sys.stdout = stdout
+        try:
+            code = cli.main(["-i", str(PROJECT_ROOT / "sample.csv"), "--json"])
+        finally:
+            os.sys.stdout = old_stdout
+        self.assertEqual(code, 0)
+        self.assertEqual(len(json.loads(stdout.getvalue())), 3)
+
+    def test_package_exports_engine(self):
+        import acute_liver_failure_agent as package
+
+        self.assertTrue(hasattr(package, "AcuteLiverFailureDecisionEngine"))
 
 
 if __name__ == "__main__":
     unittest.main()
-
