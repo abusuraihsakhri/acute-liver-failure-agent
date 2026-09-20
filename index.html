@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Browser-based acute liver failure prognostic decision-support calculations.">
+  <title>Acute Liver Failure Decision Support</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Clinical calculation tool</p>
+      <h1>Acute Liver Failure Decision Support</h1>
+    </div>
+    <div class="top-actions">
+      <span id="runtimeStatus" class="runtime-status" role="status" aria-live="polite">Loading Python engine…</span>
+      <button id="themeToggle" class="icon-button" type="button" aria-label="Switch to dark theme">Dark</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="panel input-panel" aria-labelledby="inputsHeading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="inputsHeading">Clinical inputs</h2>
+          <p>Enter current values. Post-resuscitation lactate is separate because KCC requires that context.</p>
+        </div>
+        <button id="resetButton" class="text-button" type="button">Reset</button>
+      </div>
+
+      <form id="alfForm">
+        <div class="field-grid identity-grid">
+          <label>
+            <span>Case ID</span>
+            <input name="patient_id" type="text" value="CASE-001" maxlength="64" autocomplete="off">
+          </label>
+          <label>
+            <span>Etiology</span>
+            <select name="etiology">
+              <option value="acetaminophen">Acetaminophen / paracetamol</option>
+              <option value="viral_hav">Hepatitis A</option>
+              <option value="viral_hbv">Hepatitis B</option>
+              <option value="dili">Drug-induced liver injury</option>
+              <option value="autoimmune">Autoimmune hepatitis</option>
+              <option value="ischemic">Ischemic</option>
+              <option value="pregnancy">Pregnancy-associated</option>
+              <option value="indeterminate">Indeterminate / seronegative</option>
+            </select>
+          </label>
+          <label>
+            <span>Age, years</span>
+            <input name="age" type="number" min="0" max="120" step="1" value="35" required>
+          </label>
+          <label>
+            <span>West Haven grade</span>
+            <select name="he_grade">
+              <option value="0">0</option>
+              <option value="1">I</option>
+              <option value="2" selected>II</option>
+              <option value="3">III</option>
+              <option value="4">IV</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="section-row">
+          <span class="section-label">Core labs</span>
+          <span class="section-rule"></span>
+        </div>
+        <div class="field-grid lab-grid">
+          <label><span>INR</span><input name="inr" type="number" min="0.1" max="50" step="0.1" value="2.8" required></label>
+          <label><span>Bilirubin <small>mg/dL</small></span><input name="bili" type="number" min="0" max="100" step="0.1" value="6.5" required></label>
+          <label><span>Creatinine <small>mg/dL</small></span><input name="cr" type="number" min="0" max="30" step="0.1" value="1.8" required></label>
+          <label><span>Arterial pH</span><input name="ph" type="number" min="6.5" max="7.8" step="0.01" value="7.34" required></label>
+          <label><span>Lactate <small>mmol/L</small></span><input name="lactate" type="number" min="0" max="30" step="0.1" value="2.4" required></label>
+          <label><span>Post-resus lactate <small>mmol/L</small></span><input name="post_lactate" type="number" min="0" max="30" step="0.1" placeholder="Optional"></label>
+          <label><span>Sodium <small>mEq/L</small></span><input name="sodium" type="number" min="100" max="180" step="0.1" value="136" required></label>
+          <label><span>Ammonia <small>µmol/L</small></span><input name="ammonia" type="number" min="0" max="500" step="1" value="110" required></label>
+          <label><span>ALT <small>U/L</small></span><input name="alt" type="number" min="0" max="50000" step="1" value="3500" required></label>
+          <label><span>Glucose <small>mg/dL</small></span><input name="glucose" type="number" min="0" max="1200" step="1" value="85" required></label>
+          <label><span>Jaundice → HE <small>days</small></span><input name="jaundice_days" type="number" min="0" step="1" value="4" required></label>
+          <div class="check-stack" role="group" aria-label="Organ support">
+            <label class="check"><input name="dialysis" type="checkbox"><span>Dialysis / RRT</span></label>
+            <label class="check"><input name="vasopressor" type="checkbox"><span>Vasopressor use</span></label>
+          </div>
+        </div>
+
+        <div id="apapFields">
+          <div class="section-row">
+            <span class="section-label">Acetaminophen</span>
+            <span class="section-rule"></span>
+          </div>
+          <div class="field-grid apap-grid">
+            <label><span>Concentration <small>µg/mL</small></span><input name="apap_level" type="number" min="0" step="0.1" placeholder="Optional"></label>
+            <label><span>Hours since ingestion</span><input name="apap_hours" type="number" min="0" step="0.1" placeholder="Optional"></label>
+            <p class="field-note">The Rumack–Matthew nomogram is applied only to acute-ingestion concentrations obtained 4–24 hours after ingestion.</p>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button id="analyzeButton" class="primary-button" type="submit" disabled>Analyze</button>
+          <button id="exportButton" class="secondary-button" type="button" disabled>Export JSON</button>
+          <p class="privacy-note">Runs locally in your browser. Clinical inputs are not saved or transmitted by this app.</p>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel results-panel" aria-labelledby="resultsHeading">
+      <div class="panel-heading">
+        <div>
+          <h2 id="resultsHeading">Results</h2>
+          <p>Prognostic aids must be interpreted with serial clinical assessment.</p>
+        </div>
+      </div>
+
+      <div id="emptyState" class="empty-state">
+        <div class="empty-mark" aria-hidden="true">ALF</div>
+        <h3>Ready for analysis</h3>
+        <p>Results will show KCC, ALFSG 21-day transplant-free survival, historical MELD/MELD-Na, encephalopathy stage, and contextual action prompts.</p>
+      </div>
+
+      <div id="resultContent" class="result-content" hidden>
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span>King's College</span>
+            <strong id="kccValue">—</strong>
+            <small id="kccDetail">—</small>
+          </article>
+          <article class="metric-card">
+            <span>ALFSG 21-day TFS</span>
+            <strong id="alfsgValue">—</strong>
+            <small id="alfsgDetail">—</small>
+          </article>
+          <article class="metric-card">
+            <span>MELD / MELD-Na</span>
+            <strong id="meldValue">—</strong>
+            <small>Historical prognostic adjunct only</small>
+          </article>
+          <article class="metric-card">
+            <span>Encephalopathy</span>
+            <strong id="heValue">—</strong>
+            <small id="heDetail">—</small>
+          </article>
+        </div>
+
+        <article id="apapCard" class="detail-card" hidden>
+          <div class="detail-title"><span>Acetaminophen assessment</span><strong id="apapNac">—</strong></div>
+          <p id="apapRisk">—</p>
+        </article>
+
+        <article class="detail-card">
+          <div class="detail-title"><span>Ammonia / neurocritical context</span><strong id="ammoniaValue">—</strong></div>
+          <p id="ammoniaDetail">—</p>
+        </article>
+
+        <article class="actions-card">
+          <h3>Clinical action prompts</h3>
+          <ul id="actionsList"></ul>
+        </article>
+
+        <aside class="safety-box">
+          <strong>Important:</strong>
+          <span>KCC and ALFSG are prognostic tools, not autonomous transplant-listing rules. OPTN Status 1A eligibility is assessed separately under current allocation policy. For acetaminophen poisoning, use poison-center/clinical-toxicology guidance.</span>
+        </aside>
+      </div>
+
+      <div id="errorBox" class="error-box" role="alert" hidden></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Acute liver failure decision-support calculator</span>
+    <a href="https://github.com/abusuraihsakhri/acute-liver-failure-agent" rel="noopener noreferrer">Source</a>
+  </footer>
+</body>
+</html>
