@@ -1,5 +1,7 @@
 # Acute Liver Failure Calculator
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/acute-liver-failure-agent/)
+
 A Python library, command-line tool, and browser calculator for acute liver failure (ALF) prognostic calculations. The project implements King's College Hospital criteria, the published Acute Liver Failure Study Group (ALFSG) 21-day transplant-free survival model, West Haven encephalopathy staging, contextual acetaminophen assessment, and historical MELD/MELD-Na calculations.
 
 The browser version runs the same Python engine locally with Pyodide. No clinical inputs are sent to an application server.
@@ -31,7 +33,7 @@ This calculator does not replace clinical assessment and does not make diagnosti
 
 The static interface uses Pyodide to execute `liver_failure_prognostic.py` directly in the browser. Clinical form data remain in browser memory and are not persisted by the application. The site loads the Pyodide runtime from jsDelivr; this external request does not include form values.
 
-GitHub Pages deployment is defined in `.github/workflows/pages.yml`. The live link is added here only after the deployed site has been verified.
+GitHub Pages deployment is defined in `.github/workflows/pages.yml`.
 
 ## Installation
 
