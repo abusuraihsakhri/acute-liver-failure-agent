@@ -1,0 +1,29 @@
+name: Create v3.0.0 Release
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - ".github/workflows/release-v3.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release if absent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v3.0.0 --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "v3.0.0 already exists"
+            exit 0
+          fi
+
+          gh release create v3.0.0 \
+            --repo "${{ github.repository }}" \
+            --target "$GITHUB_SHA" \
+            --title "v3.0.0" \
+            --notes "Clinical-model corrections, packaging repair, expanded regression tests, and a new client-side Pyodide browser interface. King's College and ALFSG outputs are explicitly separated from OPTN Status 1A allocation policy."
