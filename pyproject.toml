@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "acute-liver-failure-engine"
 version = "3.0.0"
-description = "Acute liver failure prognostic decision-support calculations and CLI"
+description = "Acute liver failure prognostic calculations and command-line interface"
 readme = "README.md"
 authors = [{ name = "Abu Suraih Sakhri" }]
 license = { text = "MIT" }
