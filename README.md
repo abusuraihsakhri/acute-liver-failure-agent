@@ -1,12 +1,12 @@
-# Acute Liver Failure Decision Support
+# Acute Liver Failure Calculator
 
-A Python library, command-line tool, and browser interface for structured acute liver failure (ALF) prognostic calculations. The project implements King's College Hospital criteria, the published Acute Liver Failure Study Group (ALFSG) 21-day transplant-free survival model, West Haven encephalopathy staging, contextual acetaminophen assessment, and historical MELD/MELD-Na calculations.
+A Python library, command-line tool, and browser calculator for acute liver failure (ALF) prognostic calculations. The project implements King's College Hospital criteria, the published Acute Liver Failure Study Group (ALFSG) 21-day transplant-free survival model, West Haven encephalopathy staging, contextual acetaminophen assessment, and historical MELD/MELD-Na calculations.
 
 The browser version runs the same Python engine locally with Pyodide. No clinical inputs are sent to an application server.
 
 ## Clinical scope and limitations
 
-This project is decision support, not an autonomous diagnostic, treatment, transplant-listing, or organ-allocation system.
+This calculator does not replace clinical assessment and does not make diagnostic, treatment, transplant-listing, or organ-allocation decisions.
 
 - **King's College criteria (KCC)** are poor-prognosis criteria that support urgent transplant-center assessment. Meeting KCC does **not** by itself establish U.S. OPTN Status 1A.
 - **ALFSG prognostic index** uses the published 2016 logistic model: encephalopathy grade, favorable/unfavorable etiology, vasopressor use, bilirubin, and INR. It estimates 21-day transplant-free survival and is not a listing rule.
